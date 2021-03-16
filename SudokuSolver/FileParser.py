@@ -5,17 +5,24 @@ from soup2dict import convert
 
 
 class FileParser:
-    def __init__(self):
+    def __init__(self,file):
         """
         On initialization opens a file picker dialog that should be an xml file and matches the correct fille pattern otherwise
         raises an error
         """
-        self.acceptable_file = True
-        self.file_name = askopenfilename()
-        self.filename, self.file_extension = os.path.splitext(self.file_name)
-        if self.file_extension != '.xml':
-            # TODO make this a dialog
-            raise TypeError('Select an xml file to parse ')
+        try:
+            if os.path.isfile(file):
+                self.acceptable_file = True
+                self.filename, self.file_extension = os.path.splitext(file)
+        except FileNotFoundError as ex:
+            print(ex)
+            #TODO if exception raised launch the gui then the filepicker 
+            self.file_name = askopenfilename()
+            if self.file_extension != '.xml':
+                raise TypeError('Select an xml file to parse ')  # TODO make this a dialog
+            self.filename, self.file_extension = os.path.splitext(self.file_name)
+            self.acceptable_file = True
+       
 
     def extract_metadata(self):
         """Extracts the meta data from the xml file in order to create the puzzle using BeautifulSoup
@@ -56,5 +63,5 @@ class FileParser:
                 self.pigeonhole = bool(bs_content.find(
                     "pigeonhole_decidable").get_text())
 
-file = FileParser()
-file.extract_metadata()
+
+
