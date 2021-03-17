@@ -30,8 +30,10 @@ class FileParser:
 
         except FileNotFoundError as ex:
             print(ex)
+            self.filename = None
         except Exception as e:
             print(e)
+            self.filename = None
 
     def extract_metadata(self):
         """Extracts the meta data from the xml file in order to create the puzzle using BeautifulSoup
