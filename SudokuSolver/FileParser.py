@@ -5,24 +5,33 @@ from soup2dict import convert
 
 
 class FileParser:
-    def __init__(self,file):
+    def __init__(self, file):
         """
-        On initialization opens a file picker dialog that should be an xml file and matches the correct fille pattern otherwise
-        raises an error
+        takes a file as a argument splits it into a filename and extension,then checks if the extension is xml 
+        if extension is xml parses the file to extract puzzle attributes 
         """
+        self.open_file(file)
+        self.extract_metadata()
+
+    def open_file(self, file):
+        """Tries to open the user inputed file splits the file name into name and extension
+        checks if the file has an xml extension if it doesn't raise a type error
+        defines these instance variables:
+        filename: the name of the file
+        file_extension:the file extension
+        acceptable_file: boolean if the file is an acceptable format to parse """
         try:
             if os.path.isfile(file):
-                self.acceptable_file = True
                 self.filename, self.file_extension = os.path.splitext(file)
+                if self.file_extension != '.xml':
+                    raise TypeError('Select an xml file to parse ')
+                else:
+                    self.acceptable_file = True
+
         except FileNotFoundError as ex:
             print(ex)
-            #TODO if exception raised launch the gui then the filepicker 
-            self.file_name = askopenfilename()
-            if self.file_extension != '.xml':
-                raise TypeError('Select an xml file to parse ')  # TODO make this a dialog
-            self.filename, self.file_extension = os.path.splitext(self.file_name)
-            self.acceptable_file = True
-       
+        except Exception as e:
+            print(e)
 
     def extract_metadata(self):
         """Extracts the meta data from the xml file in order to create the puzzle using BeautifulSoup
@@ -36,7 +45,7 @@ class FileParser:
         unique_solution:indicates if there is onle one solution,
         pigeonhole:indicates if the puzzle is pigeonhole decideable"""
         if self.acceptable_file:
-            with open(self.file_name, 'r') as file:
+            with open(self.filename, 'r') as file:
                 content = file.readlines()  # extract rows per box
                 content = "".join(content)
                 bs_content = bs(content, 'xml')
@@ -48,7 +57,6 @@ class FileParser:
 
                 self.value_range = range(
                     1, (self.rows_per_box * self.cols_per_box) + 1)
-
 
                 self.start_state = convert(bs_content.find("start_state"))
 
@@ -62,6 +70,3 @@ class FileParser:
 
                 self.pigeonhole = bool(bs_content.find(
                     "pigeonhole_decidable").get_text())
-
-
-
