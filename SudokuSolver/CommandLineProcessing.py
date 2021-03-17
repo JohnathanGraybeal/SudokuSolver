@@ -1,7 +1,5 @@
 from FileParser import FileParser
-import getopt
 import argparse
-import sys
 import os
 
 
