@@ -80,6 +80,3 @@ class CommandLineProcessing:
                     self.exit = True
                 else:
                     pass
-
-
-cmd = CommandLineProcessing()
