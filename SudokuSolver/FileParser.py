@@ -1,6 +1,6 @@
 import os
-from tkinter.filedialog import askopenfilename
 from bs4 import BeautifulSoup as bs
+import tkinter.filedialog
 
 
 class FileParser:
@@ -12,7 +12,6 @@ class FileParser:
         """
         self.rows_per_box = 3
         self.cols_per_box = 3
-        self.start_state = {(): [1, self.rows_per_box * self.cols_per_box]}
 
         self.open_file(file)
         self.extract_metadata()
@@ -36,6 +35,11 @@ class FileParser:
             self.acceptable_file = False
             self.filename = None
             self.file_extension = None
+            file_to_open = tkinter.filedialog.askopenfilename(filetypes=[("XML","*.xml")])
+            self.open_file(file_to_open)
+            
+
+
 
     def extract_metadata(self):
         """Extracts the meta data from the xml file in order to create the puzzle using BeautifulSoup
@@ -65,24 +69,37 @@ class FileParser:
                 if self.cols_per_box < 0:
                     self.cols_per_box = 3
 
-                self.value_range = range(
-                    1, (self.rows_per_box * self.cols_per_box) + 1)
+                #logic to deal with my edge cases
+
+                if self.cols_per_box > 0 and self.rows_per_box == 0:
+                    self.value_range = {1,self.cols_per_box}
+                elif self.rows_per_box > 0 and self.cols_per_box == 0:
+                    self.value_range = {1,self.rows_per_box}
+                elif self.rows_per_box == 0 and self.cols_per_box == 0:
+                    self.value_range = {1,1}
+                else:
+                    self.value_range = {1, range(
+                        1, (self.rows_per_box * self.cols_per_box) + 1)[-1]}
 
                 self.start_state = str(bs_content.find("start_state"))
 
                 if "<start_state/>" in self.start_state:
-                    self.start_state = {
-                        (): [1, self.rows_per_box * self.cols_per_box]}
+                    self.start_state = {}
 
                 elif "<start_state/>" not in self.start_state:
+                    if " " in self.start_state:
+                        self.start_state = self.start_state.replace(" ", "",)
+                    if "\n" in self.start_state:
+                        self.start_state = self.start_state.replace("\n", "",)
+                    if "\\" in self.start_state:
+                        self.start_state = self.start_state.replace("\\", "",)
                     self.start_state = self.start_state.replace(
                         "<start_state>", "", 1)
                     self.start_state = self.start_state.replace(
                         "</start_state>", "", 1)
                     self.start_state = eval(self.start_state)
                 else:
-                    self.start_state = {
-                        (): [1, self.rows_per_box * self.cols_per_box]}
+                    self.start_state = {}
 
                 self.well_formed = str(
                     bs_content.find("well_formed").get_text())
