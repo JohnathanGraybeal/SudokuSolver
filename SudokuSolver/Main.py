@@ -1,8 +1,6 @@
-from FileParser import FileParser
-import sys
-
-file = FileParser()
-file.extract_metadata()
-
-print(file.file_name)
-
+from Solver import *
+import tkinter.filedialog
+# wasn' neccessrily since this program was so messy but it's still better to have it
+if __name__ == "__main__":
+    solver = Solver(" ")
+    file = input()
