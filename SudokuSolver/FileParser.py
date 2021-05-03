@@ -6,108 +6,176 @@ import tkinter.filedialog
 class FileParser:
 
     def __init__(self, file):
-        """
-        takes a file as a argument splits it into a filename and extension,then checks if the extension is xml 
-        if extension is xml parses the file to extract puzzle attributes 
-        """
-        self.rows_per_box = 3
-        self.cols_per_box = 3
+        """By default only sets the private property file to none when extract_metadata is called by the object instance it will have a value """
+        self._file = None
 
-        self.open_file(file)
-        self.extract_metadata()
+    @property
+    def file(self):
+        """Returns the name of the file """
+        return self._file
 
-    def open_file(self, file):
-        """Tries to open the user inputed file splits the file name into name and extension
-        checks if the file has an xml extension if it doesn't raise a type error
-        defines these instance variables:
-        filename: the name of the file
-        file_extension:the file extension
-        acceptable_file: boolean if the file is an acceptable format to parse """
+    @file.setter
+    def file(self, user_file):
+        """Validates the user selected file 
+            it it's a valid file split into name and extension
+            if it's not an xml extension set acceptable file to false and raise type exception
+            then open file dialog so user can choose a valid file  """
+        if os.path.isfile(user_file):
+            self._file = user_file
+            self._filename, self._file_extension = os.path.splitext(user_file)
+            try:
+                if self._file_extension != '.xml':
+                    self.acceptable_file = False
+                    raise TypeError('File must be a .xml file  ')
+                else:
+                    self.acceptable_file = True
+            except TypeError:
+                file_to_open = tkinter.filedialog.askopenfilename(
+                    filetypes=[("XML", "*.xml")])
+                self._file = file_to_open
 
-        if os.path.isfile(file):
-            self.filename, self.file_extension = os.path.splitext(file)
-            if self.file_extension != '.xml':
-                self.acceptable_file = False
-                raise TypeError('Select an xml file to parse ')
-            else:
-                self.acceptable_file = True
         else:
-            self.acceptable_file = False
-            self.filename = None
-            self.file_extension = None
-            file_to_open = tkinter.filedialog.askopenfilename(filetypes=[("XML","*.xml")])
-            self.open_file(file_to_open)
-            
+            file_to_open = tkinter.filedialog.askopenfilename(
+                filetypes=[("XML", "*.xml")])
+            self._file = file_to_open
 
+    @property
+    def rows(self):
+        """Returns number of rows in each subgrid  """
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()  # extract rows per box
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.rows_per_box = int(
+                bs_content.find("rows_per_box").get_text())
+            if self.rows_per_box < 0:
+                self.rows_per_box = 3
+        return self.rows_per_box
 
+    @property
+    def cols(self):
+        """Returns number of cols """
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()  # extract rows per box
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.cols_per_box = int(
+                bs_content.find("cols_per_box").get_text())
+            if self.cols_per_box < 0:
+                self.cols_per_box = 3
+        return self.cols_per_box
 
-    def extract_metadata(self):
-        """Extracts the meta data from the xml file in order to create the puzzle using BeautifulSoup
-        it creates several class variables:
-        rows_per_box:the number of rows per box
-        cols_per_box:number of columns per box,
-        value_range:the numbers that can be used to fill the boxes
-        start_state:initial state of the puzzle,
-        well_formed:true false or unknown indicates if start_state keys are in range and that it has a correct value_range,
-        solable:indicates if the puzzle is solveable,
-        unique_solution:indicates if there is onle one solution,
-        pigeonhole:indicates if the puzzle is pigeonhole decideable"""
-        if self.acceptable_file:
-            name = self.filename + self.file_extension
-            with open(name, 'r') as file:
-                content = file.readlines()  # extract rows per box
-                content = "".join(content)
-                bs_content = bs(content, 'xml')
+    @property
+    def value_range(self):
+        """Returns the range of valid values as a tuple """
+        if self.rows == 0 and self.cols == 0:  # handle 0x0
+            self.range = {1}
+        elif self.rows >= 1 and self.cols == 0:  # hand nx0
+            self.range = {1, self.rows}
+        elif self.rows == 0 and self.cols >= 1:  # handle 0xn
+            self.range = {1, self.cols}
+        else:
+            range_val = self.rows * self.cols
+            self.range = {1, range_val}
+        return self.range
 
-                self.rows_per_box = int(
-                    bs_content.find("rows_per_box").get_text())
-                if self.rows_per_box < 0:
-                    self.rows_per_box = 3
+    @property
+    def start_state(self):
+        """returns a dict of the start state or puzzle hints """
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.state = str(bs_content.find("start_state"))
+        if "<start_state/>" in self.state:
+            self.state = {}
 
-                self.cols_per_box = int(
-                    bs_content.find("cols_per_box").get_text())
-                if self.cols_per_box < 0:
-                    self.cols_per_box = 3
+        elif "<start_state/>" not in self.state:
+            if " " in self.state:
+                self.state = self.state.replace(" ", "",)
+            if "\n" in self.state:
+                self.state = self.state.replace("\n", "",)
+            if "\\" in self.state:
+                self.state = self.state.replace("\\", "",)
+                self.state = self.state.replace(
+                    "<start_state>", "", 1)
+                self.state = self.state.replace(
+                    "</start_state>", "", 1)
+                self.state = eval(self.state)
+        else:
+            self.state = {}
 
-                #logic to deal with my edge cases
+        return self.state
 
-                if self.cols_per_box > 0 and self.rows_per_box == 0:
-                    self.value_range = {1,self.cols_per_box}
-                elif self.rows_per_box > 0 and self.cols_per_box == 0:
-                    self.value_range = {1,self.rows_per_box}
-                elif self.rows_per_box == 0 and self.cols_per_box == 0:
-                    self.value_range = {1,1}
-                else:
-                    self.value_range = {1, range(
-                        1, (self.rows_per_box * self.cols_per_box) + 1)[-1]}
+    @property
+    def well_formed(self):
+        "returns the value of the well formed property from the xml file"
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.formed = str(
+                bs_content.find("well_formed").get_text())
+        return self.formed
 
-                self.start_state = str(bs_content.find("start_state"))
+    @property
+    def solvable(self):
+        """ returns T/F if the puzzle is able to be solved"""
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.can_solve = str(bs_content.find("solvable").get_text())
+        return self.can_solve
 
-                if "<start_state/>" in self.start_state:
-                    self.start_state = {}
+    @property
+    def unique_solution(self):
+        """returns T/F if the puzzle only has one unique solutions """
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.solution = str(
+                bs_content.find("unique_solution").get_text())
+        return self.solution
 
-                elif "<start_state/>" not in self.start_state:
-                    if " " in self.start_state:
-                        self.start_state = self.start_state.replace(" ", "",)
-                    if "\n" in self.start_state:
-                        self.start_state = self.start_state.replace("\n", "",)
-                    if "\\" in self.start_state:
-                        self.start_state = self.start_state.replace("\\", "",)
-                    self.start_state = self.start_state.replace(
-                        "<start_state>", "", 1)
-                    self.start_state = self.start_state.replace(
-                        "</start_state>", "", 1)
-                    self.start_state = eval(self.start_state)
-                else:
-                    self.start_state = {}
+    @property
+    def pigeonhole(self):
+        """returns T/F if the puzzle is pigeonhole decidable """
+        name = self._filename + self._file_extension
+        with open(name, 'r') as file:
+            content = file.readlines()
+            content = "".join(content)
+            bs_content = bs(content, 'xml')
+            self.pigeonhole_decidable = str(bs_content.find(
+                "pigeonhole_decidable").get_text())
+        return self.pigeonhole_decidable
 
-                self.well_formed = str(
-                    bs_content.find("well_formed").get_text())
+    def extract_data(self, file):
+        """Calls all the properties to extract all of the data from a given file """
+        self.file = file
+        self.rows
+        self.cols
+        self.value_range
+        self.start_state
+        self.well_formed
+        self.solvable
+        self.unique_solution
+        self.pigeonhole
 
-                self.solvable = str(bs_content.find("solvable").get_text())
-
-                self.unique_solution = str(
-                    bs_content.find("unique_solution").get_text())
-
-                self.pigeonhole = str(bs_content.find(
-                    "pigeonhole_decidable").get_text())
+    def display_attributes(self):
+        """Displays the attributes of the file """
+        print(f"File Name: {self.file}")
+        print(f"Size: {self.rows} x {self.cols}")
+        print(f"Well Formed: {self.well_formed}")
+        print(f"Solvable: {self.solvable}")
+        print(f"Unique Solution: {self.unique_solution}")
+        print(f"Pigeon Hole Decideable: {self.pigeonhole}")
+        print(f"Value Range: {self.value_range}")
+        print("-"*56)
