@@ -1,136 +1,114 @@
-from InitializePuzzle import InitializePuzzle
-import time
-from Utility import clear
-import os
-
-# <summary>
-# Manages the solving of the puzzle and displaying of the actual grids
-# </summary>
-# <param name="Geeksforgeeks"></param>
-
 
 class Solver:
-    def __init__(self, file):
+    def __init__(self, grid, rows, cols, value_range):
+        self.grids = grid
+        self.rows = rows
+        self.cols = cols
+        self.value_range = value_range
+        self.step = 0
 
-        print("Invalid time delay defaulting it to 0")
+    def size_zero(self):
+        """If 0x0 auto solve it since it is an arbitrary puzzle """
+        self.grids[0][0] = 1
 
-        self.puzzle = InitializePuzzle(
-            r"{}".format(file))
-        self.grids = self.puzzle.grid
-        self.display_grid()
+    def zero_by_n(self):
+        """If 0xn auto solve since it's an arbitrary puzzle """
+        for i in range(self.cols):
+            self.grids[0][i] = i + 1
 
-        clear()
-        self.sieve()
+   
 
-     # <summary>
-    # starts solving process also handles solving for trivial puzzles
-    # </summary>
 
-    def sieve(self):
-        if self.puzzle.parser.rows_per_box == 0 and self.puzzle.parser.cols_per_box == 0:  # trivial case
-            self.grids[0][0] = 1
-            self.display_grid()
-
-        elif self.puzzle.parser.rows_per_box == 0 and self.puzzle.parser.cols_per_box >= 1:  # trivial case
-            for value in self.grids:
-                i = 1
-                for v, x in enumerate(value):
-                    self.grids[0][v] = i
-                    i += 1
-            self.display_grid()
-        elif self.puzzle.parser.rows_per_box == 1 and self.puzzle.parser.cols_per_box == 1:
-            self.grids[0][0] = 1
-            self.grids[0][1] = 2
-            self.display_grid()
-        else:
-            self.check_cell(self.grids)
-            self.display_grid()
-
-     # <summary>
-    # validates a given number to make sure that it is legal
-    # </summary>
-    # <param name="grid"> grid that represents a puzzle</param>
-    # <param name="row"> represents 0 based row of grid</param>
-    # <param name="col"> represents 0 based column of grid</param>
-    # <param name="num"> number to be selected</param>
     def validate_num(self, grid, row, col, num):
-        # check row
+        """Validates that a given number is a valid choice for the overall puzzle """
         try:
             for i in range(len(grid)):
+                self.step += 1
                 print(
-                    f" attempting to select and validate a number in row {i}")
+                    f"Step {self.step} attempting to select and validate a number in row {i}")
                 if grid[row][i] == num:
-                    print(f" found a bad value at {row},{i}")
+                    self.step += 1
+                    print(f"Step {self.step} found a bad value at {row},{i}")
                     return False
             # check col
             for i in range(len(grid[0])):
+                self.step += 1
                 print(
-                    f" attempting to select and validate a number in col {i}")
+                    f"Step {self.step} attempting to select and validate a number in col {i}")
                 if grid[i][col] == num:
-                    print(f" found a bad value at {row},{i}")
+                    self.step += 1
+                    print(f"Step {self.step} found a bad value at {row},{i}")
                     return False
             # get top-left corner
-            top_left_row_subgrid = row - row % self.puzzle.parser.rows_per_box
-            top_left_col_subgrid = col - col % self.puzzle.parser.cols_per_box
-            # check 3x3 square
-            for i in range(top_left_row_subgrid, top_left_row_subgrid + self.puzzle.parser.rows_per_box):
-                print(f" checking row {i}")
-                for j in range(top_left_col_subgrid, top_left_col_subgrid+self.puzzle.parser.cols_per_box):
-                    print(f" checking column {j}")
+            top_left_row_subgrid = row - row % self.rows
+            top_left_col_subgrid = col - col % self.cols
+            # check grid
+            for i in range(top_left_row_subgrid, top_left_row_subgrid + self.rows):
+                self.step += 1
+                print(f"Step {self.step} checking row {i}")
+                for j in range(top_left_col_subgrid, top_left_col_subgrid+self.cols):
+                    self.step += 1
+                    print(f"Step {self.step} checking column {j}")
                     if grid[i][j] == num:
-                        print(f" found a bad value at {i},{j}")
+                        self.step += 1
+                        print(f"Step {self.step} found a bad value at {i},{j}")
                         return False
             # return True if none of the cases above returns False
-            print(f" Number validated")
+
+            print(f"Number validated")
             return True
         except IndexError:
             print("Attempted to solve. Puzzle is being considered unsolvable")
-    # <summary>
-    # does the actual solving loops and exhaustes each row,col and recursively calles the validation function
-    # </summary>
-    # <param name="grid"> grid that represents a puzzle</param>
-
     def check_cell(self, grid):
+        """Goes through each row column value checks if a value is a default 
+            then in the range of valid values validate the number it is attempting to place otherwise if a valid number
+            isn't found backtrack when all rows are exhaused does a final validation for all numbers  """
         try:
-            val = [x for x in self.puzzle.parser.value_range]
+            val = [x for x in self.value_range]
             for i in range(len(grid)):
-                print(
-                    f" searching cell at row {i} for default value")
                 for j in range(len(grid[0])):
+                    self.step += 1
                     print(
-                        f" searching cell at  {i},{j} for default value")
-                    if grid[i][j] == self.puzzle.parser.value_range:
+                        f"Step {self.step} searching cell at  {i},{j} for default value")
+                    if grid[i][j] == self.value_range:
+                        self.step += 1
                         print(
-                            f" found default value in grid at {i},{j}")
+                            f"Step {self.step} found default value in grid at {i},{j}")
                         for num in range(val[0], val[1] + 1):  # range of valid numbers
+                            self.step += 1
                             print(
-                                f" looking in value range for appropiate number")
+                                f"Step {self.step} looking in {self.value_range} for appropiate number")
                             if self.validate_num(grid, i, j, num):
+                                self.step += 1
                                 print(
-                                    f" found valid number trying grid {i},{j} replacing {grid[i][j]} with {num}")
+                                    f"Step {self.step} found valid number trying grid {i},{j} replacing {grid[i][j]} with {num}")
                                 grid[i][j] = num
                                 result = self.check_cell(grid)
                                 if result == True:
+                                    self.step += 1
                                     print(
-                                        f" found {num} to be a valid entry at {i}, {j}")
+                                        f"Step {self.step} found {num} to be a valid entry at {i}, {j}")
                                     return True  # valid number found for first empty cell
                                 else:
+                                    self.step += 1
                                     print(
-                                        f"haven't found a valid value for grid {i},{j} temporarily setting {grid[i][j]} to {self.puzzle.parser.value_range}")
-                                    grid[i][j] = self.puzzle.parser.value_range
+                                        f"Step {self.step} haven't found a valid value for grid {i},{j} temporarily setting {grid[i][j]} to {self.value_range}")
+                                    grid[i][j] = self.value_range
                                     print(
-                                        f"  couldn't find a valid number attempting to backtrack")
+                                        f"couldn't find a valid number attempting to backtrack")
+                                    
                         print(
-                            f" no numbers in a valid range found ")
+                            f"no numbers in a valid range found ")
                         return False
-            print(f" exhausted last row")
+            print(f"exhausted last row")
+            self.grids = grid
             return True
         except IndexError:
             print("Attempted to solve. Puzzle is being considered unsolvable")
-    # <summary>
-    # displays the current state of the sudoku grid
-    # </summary>
+    
 
     def display_grid(self):
+        """Display current state of the puzzle """
+        print("-"*56)
         for grid in self.grids:
             print(grid)
