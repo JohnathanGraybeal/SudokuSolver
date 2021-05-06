@@ -1,6 +1,5 @@
 import os
 from bs4 import BeautifulSoup as bs
-import tkinter.filedialog
 
 
 class FileParser:
@@ -30,14 +29,7 @@ class FileParser:
                 else:
                     self.acceptable_file = True
             except TypeError:
-                file_to_open = tkinter.filedialog.askopenfilename(
-                    filetypes=[("XML", "*.xml")])
-                self._file = file_to_open
-
-        else:
-            file_to_open = tkinter.filedialog.askopenfilename(
-                filetypes=[("XML", "*.xml")])
-            self._file = file_to_open
+                pass
 
     @property
     def rows(self):
@@ -71,7 +63,7 @@ class FileParser:
     def value_range(self):
         """Returns the range of valid values as a tuple """
         if self.rows == 0 and self.cols == 0:  # handle 0x0
-            self.range = {1}
+            self.range = {1,1}
         elif self.rows >= 1 and self.cols == 0:  # hand nx0
             self.range = {1, self.rows}
         elif self.rows == 0 and self.cols >= 1:  # handle 0xn
@@ -90,6 +82,7 @@ class FileParser:
             content = "".join(content)
             bs_content = bs(content, 'xml')
             self.state = str(bs_content.find("start_state"))
+
         if "<start_state/>" in self.state:
             self.state = {}
 
@@ -105,6 +98,13 @@ class FileParser:
                 self.state = self.state.replace(
                     "</start_state>", "", 1)
                 self.state = eval(self.state)
+            else: #handler for when start state doesn't have new lines
+                self.state = self.state.replace(
+                    "<start_state>", "", 1)
+                self.state = self.state.replace(
+                    "</start_state>", "", 1)
+                self.state = eval(self.state)
+
         else:
             self.state = {}
 
